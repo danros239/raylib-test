@@ -14,6 +14,8 @@
 
 Color DEEP_SPACE = (Color){10, 20, 30, 255};
 
+const int maxObjCount = 1000;
+
 int main()
 {
     InitWindow(window_width, window_height, "mygame");
@@ -24,6 +26,10 @@ int main()
 
     Ship s;
     Object o;
+    Object* objArray = new Object[10];
+    s.init(objArray);
+    
+    o.initDefault();
     o.setMass(100);
     o.initHitboxDefault();
 
@@ -42,20 +48,17 @@ int main()
         anchor.scale(maxdist);
         s.turnToMouse(anchor.getMouseScreenspaceCoords(), 1);
 
-        for(int subticks=0; subticks<physicsTicks; subticks++)
-        {
-            s.obj.checkCollision(&o);
-            // o.checkCollision(&(s.obj));
-            s.move(IsKeyDown(KEY_W) || IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsKeyDown(KEY_S), IsKeyDown(KEY_A), IsKeyDown(KEY_D));
-            o.update();
-        }
+
+        // s.obj->checkCollision(&o);
+        o.checkCollision(s.obj);
+        s.move(IsKeyDown(KEY_W) || IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsKeyDown(KEY_S), IsKeyDown(KEY_A), IsKeyDown(KEY_D));
+
+        o.update();
 
         ClearBackground(DEEP_SPACE);
 
         s.draw();
         o.draw();
-
-       
 
         DrawRectangle(-2, -2, 4, 4, RAYWHITE);
 

@@ -156,33 +156,42 @@ public:
 class Ship // Spaceship, controlled by the player and AI (sold separately)
 {
 private:
+    bool initialized = false;
     float baseThrust = 1500, baseAngleAccel = 5000;
     float thrust = baseThrust, angleAccel = baseAngleAccel;
     float maxEnergy, energy, baseRechargeRate = 5, rechargeRate = 5;
     float maxHP, HP;
 public:
-    Object obj;
+    Object *obj;
     Ship()
     {
-        obj.setPos((Vector2){0, 28});
-        obj.setMass(10);
-        obj.initHitboxFromArray(shipVertices, shipIndices, 6, 4);
+        
+    }
+    void init(Object* objPtr)
+    {
+        obj->initDefault();
+
+        obj->setPos((Vector2){0, 28});
+        obj->setMass(10);
+        obj->initHitboxFromArray(shipVertices, shipIndices, 6, 4);
 
         maxHP = 100;
         maxEnergy = 10;
         HP = maxHP;
         energy = maxEnergy;
+
+        initialized = true;
     }
     void turnToMouse(Vector2 mousePos, bool key)
     {
-        float stopAngle = fabs(obj.getAngleVel())*obj.getAngleVel() / 2 / (angleAccel/obj.mass/obj.momentInertia);
+        float stopAngle = fabs(obj->getAngleVel())*obj->getAngleVel() / 2 / (angleAccel/obj->mass/obj->momentInertia);
         bool shouldStop = fabs(stopAngle) > PI;
-        stopAngle += obj.getDirection();
+        stopAngle += obj->getDirection();
         
         if(key)
         {
             
-            Vector2 relVec = Vector2Subtract(mousePos, obj.getPos());
+            Vector2 relVec = Vector2Subtract(mousePos, obj->getPos());
             relVec = Vector2Normalize(relVec);
             float relAngle = atan2(relVec.y, relVec.x);
             bool direction = (relAngle - stopAngle > 0);
@@ -190,9 +199,9 @@ public:
                 direction = !direction;
 
             if(!shouldStop)
-                obj.applyMoment(angleAccel * sgn<float>(direction*2 - 1));
+                obj->applyMoment(angleAccel * sgn<float>(direction*2 - 1));
             else
-                obj.applyMoment(angleAccel * -sgn<float>(obj.getAngleVel()));
+                obj->applyMoment(angleAccel * -sgn<float>(obj->getAngleVel()));
 
         
         }
@@ -201,7 +210,7 @@ public:
     {
         if(wkey)
         {
-            obj.applyForce(Vector2Rotate((Vector2){thrust, 0}, obj.getDirection()));
+            obj->applyForce(Vector2Rotate((Vector2){thrust, 0}, obj->getDirection()));
             energy -= 6/fps;
         }
         energy += baseRechargeRate/fps;
@@ -211,27 +220,27 @@ public:
         // if(dkey)
         //     obj.applyMoment(defAngleAccel);
 
-        obj.update();
+        obj->update();
     }
     void draw()
     {
-        obj.draw();
+        obj->draw();
     }
-    Object getObj()
+    Object* getObjPtr()
     {
         return obj;
     }
     Vector2 getPos()
     {
-        return obj.getPos();
+        return obj->getPos();
     }
     Vector2 getSize()
     {
-        return obj.getBounds();
+        return obj->getBounds();
     }
     Vector2 getOrigin()
     {
-        return obj.getOrigin();
+        return obj->getOrigin();
     }
     Vector3 getVitals()
     {
@@ -239,7 +248,7 @@ public:
     }
     float getAngle()
     {
-        return obj.getDirection();
+        return obj->getDirection();
     }
 
 };

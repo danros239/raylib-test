@@ -31,9 +31,9 @@ inline float crossProduct2D(Vector2 v1, Vector2 v2)
 
 float wrapAngle(float angle)
 {
-    while(angle > PI)
+    if(angle > PI)
         angle -= 2*PI;
-    while(angle < -PI)
+    if(angle < -PI)
         angle += 2*PI;
 
     return angle;
@@ -172,6 +172,10 @@ public:
     float mass, momentInertia;
     Object()
     {
+
+    }
+    void initDefault()
+    {
         position = (Vector2){0, 0};
         velocity = (Vector2){0, 0};
         acceleration = (Vector2){0, 0};
@@ -188,7 +192,6 @@ public:
         rebound = 0.0f;
 
         drawColor = GREEN;
-
     }
 
     bool initHitboxFromArray(const Vector2* vertexArray, const int* indexArray, const int vertexNum, const int triangles)
