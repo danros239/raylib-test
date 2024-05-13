@@ -80,6 +80,8 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "*.inc": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "coroutine": "cpp",
+        "valarray": "cpp"
     }
 }

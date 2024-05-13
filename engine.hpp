@@ -156,8 +156,6 @@ private:
     Vector2 position;
     Vector2 velocity;
     Vector2 acceleration;
-    Vector2 size;
-    Vector2 origin;
 
     Hitbox hbox;
 
@@ -180,8 +178,6 @@ public:
         velocity = (Vector2){0, 0};
         acceleration = (Vector2){0, 0};
 
-        size = (Vector2){80, 40};
-        origin = Vector2Scale(size, 0.5f);
         direction = 0;
         angleVel = 0;
         angleAccel = 0;
@@ -270,14 +266,6 @@ public:
     {
         return velocity;
     }
-    Vector2 getBounds()
-    {
-        return size;
-    }
-    Vector2 getOrigin()
-    {
-        return origin;
-    }
 
     float getDirection()
     {
@@ -296,41 +284,42 @@ public:
     {
         Vector2 collisionNormal;
         Vector2 collisionPoint; // common point of two objects in global coords
-        bool thisNormal = false;
-        for(int i=0; i<obj->hbox.vertexCount; i++)
-        {
-            if(hbox.contains(toLocal(obj->hbox.vertices[i], obj->position, obj->direction))) // if a vertex of obj is inside this
-            {
-                drawColor = RED;
 
+        int collisionCase = obj->hbox.type * 10 + hbox.type;
+        switch(collisionCase)
+        {
+        case 33:
+            for(int i=0; i<obj->hbox.vertexCount; i++)
+            {
+                if(hbox.contains(toLocal(obj->hbox.vertices[i], obj->position, obj->direction))) // if a vertex of obj is inside this
+                {
+                    drawColor = RED;
+
+                    collisionNormal = Vector2Rotate(hbox.collisionNormal, direction);
+                    collisionPoint = obj->toGlobal(obj->hbox.vertices[i]);
+
+                    handleCollision(obj, collisionNormal, collisionPoint, true);
+                    return true;
+                }
+            }
+        break;
+        case 3:
+            if(hbox.contains(toLocal(Vector2Zero(), obj->position, obj->direction)))
+            {
+                // std::cout << "SUCCESS" << std::endl;
                 collisionNormal = Vector2Rotate(hbox.collisionNormal, direction);
-                collisionPoint = obj->toGlobal(obj->hbox.vertices[i]);
-
+                collisionPoint = obj->toGlobal(obj->position);
                 handleCollision(obj, collisionNormal, collisionPoint, true);
-                return true;
             }
-        }
-        for(int i=0; i<hbox.vertexCount; i++)
-        {
-            if(obj->hbox.contains(obj->toLocal(hbox.vertices[i], position, direction))) // if a vertex of this is inside obj
-            {
-                obj->drawColor = RED;
-
-                collisionNormal = Vector2Rotate(obj->hbox.collisionNormal, obj->getDirection());
-                collisionPoint = toGlobal(hbox.vertices[i]);
-
-                handleCollision(obj, collisionNormal, collisionPoint, false);
-                return true;
-            }
+            break;
         }
         drawColor = BLUE;
-        obj->drawColor = BLUE;
         return false;
     }
 
     bool handleCollision(Object* obj, Vector2 collisionNormal, Vector2 collisionPoint, bool thisNormal) // collision normal in global coords
     {
-        float kRebound = Clamp((rebound + obj->rebound)/2, 0, 1) + 1;
+        float kRebound = Clamp((rebound + obj->rebound)/2, 0, 1) + 1.1;
         float direction = thisNormal*2-1;
 
         float k = obj->mass / (mass + obj->mass);
@@ -348,8 +337,6 @@ public:
         Vector2 velCenterMass = Vector2Add(Vector2Scale(velocity, mass), Vector2Scale(obj->velocity, obj->mass));
         velCenterMass = Vector2Scale(velCenterMass, 1/(mass + obj->mass));
 
-        // std::cout << velCenterMass.x << " " << velCenterMass.y << std::endl;
-
         // calculating v1 and v2 of colliding objects relative to their center of mass
         Vector2 relVel1 = Vector2Subtract(velocity, velCenterMass);
         Vector2 relVel2 = Vector2Subtract(obj->velocity, velCenterMass);
@@ -358,8 +345,12 @@ public:
         relVel1 = Vector2Add(relVel1, Vector2Scale(Vector2Rotate(relPos1, PI/2), angleVel));
         relVel2 = Vector2Add(relVel2, Vector2Scale(Vector2Rotate(relPos2, PI/2), obj->angleVel));
 
-        float coeff =   1/mass*(1 + crossProduct2D(relPos1, collisionNormal)/momentInertia) + 
-                        1/obj->mass*(1 + crossProduct2D(relPos2, collisionNormal)/obj->momentInertia);
+
+        float lever1 = crossProduct2D(relPos1, collisionNormal);
+        float lever2 = crossProduct2D(relPos2, collisionNormal);
+
+        float coeff =   1/mass*(1 + lever1/momentInertia) + 
+                        1/obj->mass*(1 + lever2/obj->momentInertia);
         coeff = (Vector2DotProduct(Vector2Subtract(relVel1, relVel2), collisionNormal)) / coeff;
 
         Vector2 imp = Vector2Scale(collisionNormal, -coeff * kRebound);

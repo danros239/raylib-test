@@ -14,10 +14,15 @@
 
 Color DEEP_SPACE = (Color){10, 20, 30, 255};
 
-const int maxObjCount = 1000;
-
 int main()
 {
+    const int maxObjCount = 10;
+    int objCount = 0;
+    const int maxProjCount = 1000;
+    int projCount = 0;
+
+    bool LMBLast = false, RMBLast = false;
+
     InitWindow(window_width, window_height, "mygame");
 
     int frames = 0;
@@ -25,13 +30,18 @@ int main()
     cameraAnchor anchor;
 
     Ship s;
-    Object o;
-    Object* objArray = new Object[10];
-    s.init(objArray);
+
+    Object* objArray = new Object[maxObjCount];
+    // std::cout << objArray << " " << objArray + 1 << std::endl;
+    s.init(objArray + 1);
+    objCount = 2;
+
+    Projectile* projArray = new Projectile[maxProjCount];
     
-    o.initDefault();
-    o.setMass(100);
-    o.initHitboxDefault();
+    objArray[0].initDefault();
+    objArray[0].setMass(100);
+    objArray[0].initHitboxDefault();
+    
 
     UI ui;
       
@@ -40,27 +50,46 @@ int main()
         BeginDrawing();
 
         Vector2 maxdist = s.getPos();
-        maxdist.x = std::max(fabs(maxdist.x), fabs(o.getPos().x));
-        maxdist.y = std::max(fabs(maxdist.y), fabs(o.getPos().y));
+        maxdist.x = std::max(fabs(maxdist.x), fabs(objArray[0].getPos().x));
+        maxdist.y = std::max(fabs(maxdist.y), fabs(objArray[0].getPos().y));
 
         BeginMode2D(anchor.cam);
 
         anchor.scale(maxdist);
         s.turnToMouse(anchor.getMouseScreenspaceCoords(), 1);
 
+        for(int i=0; i<objCount; i++)
+        {
+            for(int j=0; j<objCount; j++)
+                if(i != j)
+                    objArray[i].checkCollision(objArray + j);
 
-        // s.obj->checkCollision(&o);
-        o.checkCollision(s.obj);
+            for(int j=0; j<projCount; j++)
+                objArray[0].checkCollision(&(projArray[j].obj));
+        }
+
         s.move(IsKeyDown(KEY_W) || IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsKeyDown(KEY_S), IsKeyDown(KEY_A), IsKeyDown(KEY_D));
 
-        o.update();
+        for(int i=0; i<1; i++)
+            objArray[i].update();
+        for(int i=0; i<projCount; i++)
+            projArray[i].update();
+            
+        if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
+        {
+            s.fire(projArray + projCount);
+            projCount ++;
+        }
 
         ClearBackground(DEEP_SPACE);
 
         s.draw();
-        o.draw();
+        objArray[0].draw();
 
-        DrawRectangle(-2, -2, 4, 4, RAYWHITE);
+        for(int i=0; i<projCount; i++)
+            projArray[i].draw();
+
+        //DrawRectangle(-2, -2, 4, 4, RAYWHITE);
 
         EndMode2D();
 
@@ -68,8 +97,12 @@ int main()
         ui.draw();
         
         EndDrawing();
+
+        frames++;
     }
 
+    delete[](objArray);
+    delete[](projArray);
     CloseWindow();
 
     return 0;

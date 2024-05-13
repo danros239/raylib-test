@@ -136,7 +136,7 @@ public:
 
 class Projectile
 {
-private:
+public:
     Object obj;
     enum Behavior
     {
@@ -145,11 +145,30 @@ private:
     Behavior type;
 
     float lifetime;
-public:
+
     Projectile()
     {
-        obj.initHitboxPoint();
         type = KINETIC;
+    }
+    void init()
+    {
+        obj.initHitboxPoint();
+    }
+    void init(Behavior typ)
+    {
+        obj.initDefault();
+        obj.initHitboxPoint();
+        type = typ;
+        obj.setMass(0.2);
+    }
+    void update()
+    {
+        obj.update();
+        lifetime -= 1/fps;
+    }
+    void draw()
+    {
+        DrawCircle(obj.getPos().x, obj.getPos().y, 3, MAGENTA);
     }
 };
 
@@ -165,10 +184,15 @@ public:
     Object *obj;
     Ship()
     {
-        
+        maxEnergy = 0;
+        energy = 0;
+        maxHP = 0;
+        HP = 0;
+        obj = nullptr;
     }
     void init(Object* objPtr)
     {
+        obj = objPtr;
         obj->initDefault();
 
         obj->setPos((Vector2){0, 28});
@@ -180,7 +204,6 @@ public:
         HP = maxHP;
         energy = maxEnergy;
 
-        initialized = true;
     }
     void turnToMouse(Vector2 mousePos, bool key)
     {
@@ -222,6 +245,16 @@ public:
 
         obj->update();
     }
+    void fire(Projectile* projectilePtr)
+    {
+        projectilePtr->init(Projectile::Behavior::KINETIC);
+        projectilePtr->lifetime = 1;
+
+        Vector2 vel = Vector2Add(obj->getVel(), Vector2Rotate((Vector2){100, 0}, obj->getDirection()));
+        projectilePtr->obj.applyImpulse(Vector2Scale(vel, projectilePtr->obj.mass));
+        projectilePtr->obj.setPos(obj->getPos());
+    }
+
     void draw()
     {
         obj->draw();
@@ -233,14 +266,6 @@ public:
     Vector2 getPos()
     {
         return obj->getPos();
-    }
-    Vector2 getSize()
-    {
-        return obj->getBounds();
-    }
-    Vector2 getOrigin()
-    {
-        return obj->getOrigin();
     }
     Vector3 getVitals()
     {
