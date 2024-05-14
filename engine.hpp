@@ -306,9 +306,10 @@ public:
         case 3:
             if(hbox.contains(toLocal(Vector2Zero(), obj->position, obj->direction)))
             {
-                // std::cout << "SUCCESS" << std::endl;
+
                 collisionNormal = Vector2Rotate(hbox.collisionNormal, direction);
-                collisionPoint = obj->toGlobal(obj->position);
+                collisionPoint = obj->position;
+
                 handleCollision(obj, collisionNormal, collisionPoint, true);
             }
             break;
@@ -319,7 +320,7 @@ public:
 
     bool handleCollision(Object* obj, Vector2 collisionNormal, Vector2 collisionPoint, bool thisNormal) // collision normal in global coords
     {
-        float kRebound = Clamp((rebound + obj->rebound)/2, 0, 1) + 1.1;
+        float kRebound = Clamp((rebound + obj->rebound)/2, 0, 1) + 1;
         float direction = thisNormal*2-1;
 
         float k = obj->mass / (mass + obj->mass);
@@ -346,15 +347,15 @@ public:
         relVel2 = Vector2Add(relVel2, Vector2Scale(Vector2Rotate(relPos2, PI/2), obj->angleVel));
 
 
-        float lever1 = crossProduct2D(relPos1, collisionNormal);
-        float lever2 = crossProduct2D(relPos2, collisionNormal);
+        float lever1 = fabs(crossProduct2D(relPos1, collisionNormal));
+        float lever2 = fabs(crossProduct2D(relPos2, collisionNormal));
 
         float coeff =   1/mass*(1 + lever1/momentInertia) + 
                         1/obj->mass*(1 + lever2/obj->momentInertia);
         coeff = (Vector2DotProduct(Vector2Subtract(relVel1, relVel2), collisionNormal)) / coeff;
 
         Vector2 imp = Vector2Scale(collisionNormal, -coeff * kRebound);
-        // std::cout << " || " << imp.x/mass << " " << imp.y/mass << " || ";
+
 
         applyImpulse(imp);
         obj->applyImpulse(Vector2Scale(imp, -1));

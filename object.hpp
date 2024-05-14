@@ -159,7 +159,7 @@ public:
         obj.initDefault();
         obj.initHitboxPoint();
         type = typ;
-        obj.setMass(0.2);
+        obj.setMass(1);
     }
     void update()
     {
@@ -168,7 +168,7 @@ public:
     }
     void draw()
     {
-        DrawCircle(obj.getPos().x, obj.getPos().y, 3, MAGENTA);
+        DrawCircleV(obj.getPos(), 3, MAGENTA);
     }
 };
 
@@ -250,7 +250,7 @@ public:
         projectilePtr->init(Projectile::Behavior::KINETIC);
         projectilePtr->lifetime = 1;
 
-        Vector2 vel = Vector2Add(obj->getVel(), Vector2Rotate((Vector2){100, 0}, obj->getDirection()));
+        Vector2 vel = Vector2Add(obj->getVel(), Vector2Rotate((Vector2){200, 0}, obj->getDirection()));
         projectilePtr->obj.applyImpulse(Vector2Scale(vel, projectilePtr->obj.mass));
         projectilePtr->obj.setPos(obj->getPos());
     }
