@@ -7,11 +7,6 @@
 
 const int window_width = 1280, window_height = 720;
 
-float sfabs(float val, float eps) // fabs safe from division by zero
-{
-    return fabs(val) + eps + EPSILON;
-}
-
 float softScale(float val, float mag)
 {
     return sqrt(val*val + mag*mag);
@@ -55,12 +50,24 @@ public:
     }
     void scale(Vector2 farthestCoords)
     {
-        //UpdateCameraPro(&cam, Vector3Zero(), Vector3Zero(), Clamp(scale, minScale, maxScale));
+
         float xscale = window_width / 2 / softScale(farthestCoords.x, 100);
         float yscale = window_height / 2 / softScale(farthestCoords.y, 100);
+
         float zoom = std::min(xscale, yscale);
         cam.zoom = Clamp(zoom, minScale, maxScale);
-        //cam.target = Vector2Scale(farthestCoords, 1);
+
+        cam.offset = (Vector2){window_width/2, window_height/2};
+    }
+    void scale (Vector2 minCoords, Vector2 maxCoords)
+    {
+        cam.target = Vector2Scale(Vector2Add(minCoords, maxCoords), 0.5f);
+
+        float xscale = window_width / softScale(maxCoords.x - minCoords.x, 200);
+        float yscale = window_height / softScale(maxCoords.y - minCoords.y, 200);
+
+        float zoom = std::min(xscale, yscale);
+        cam.zoom = Clamp(zoom, minScale, maxScale);
         cam.offset = (Vector2){window_width/2, window_height/2};
     }
     void reset()
@@ -71,7 +78,7 @@ public:
     Vector2 getMouseScreenspaceCoords()
     {
         Vector2 mouseCoords = Vector2Subtract(GetMousePosition(), cam.offset);
-        return Vector2Scale(mouseCoords, 1/cam.zoom);
+        return Vector2Add(Vector2Scale(mouseCoords, 1/cam.zoom), cam.target);
     }
 };
 
@@ -242,8 +249,6 @@ public:
         //     obj.applyMoment(-defAngleAccel);
         // if(dkey)
         //     obj.applyMoment(defAngleAccel);
-
-        obj->update();
     }
     void fire(Projectile* projectilePtr)
     {

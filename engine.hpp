@@ -188,6 +188,8 @@ public:
         rebound = 0.0f;
 
         drawColor = GREEN;
+
+        hbox.initDefault();
     }
 
     bool initHitboxFromArray(const Vector2* vertexArray, const int* indexArray, const int vertexNum, const int triangles)
