@@ -141,7 +141,7 @@ public:
     }
     ~Hitbox()
     {
-        // if(type != Type::POINT)
+        // if(type == Type::TRIANGLE)
         // {
         //     delete[](vertices);
         //     delete[](indices);
@@ -258,6 +258,11 @@ public:
     void applyRotationImpulse(float imp)
     {
         angleVel += imp/(momentInertia*mass);
+    }
+
+    void setAngle(float angle)
+    {
+        direction = Clamp(angle, -PI, PI);
     }
 
     Vector2 getPos()
@@ -379,12 +384,24 @@ public:
             v2 = Vector2Add(Vector2Rotate(hbox.vertices[hbox.indices[i + 1]], direction), position);
             v3 = Vector2Add(Vector2Rotate(hbox.vertices[hbox.indices[i + 2]], direction), position);
 
-            // v1 = hbox.vertices[hbox.indices[i]];
-            // v2 = hbox.vertices[hbox.indices[i+1]];
-            // v3 = hbox.vertices[hbox.indices[i+2]];
-
-
             DrawTriangle(v1, v2, v3, drawColor);
+        }
+    }
+    void draw(float scale, Color col)
+    {
+        for(int i=0; i < hbox.indexCount; i += 3)
+        {
+
+            Vector2 v1, v2, v3;
+            v1 = Vector2Scale(hbox.vertices[hbox.indices[i]], scale);
+            v2 = Vector2Scale(hbox.vertices[hbox.indices[i+1]], scale);
+            v3 = Vector2Scale(hbox.vertices[hbox.indices[i+2]], scale);
+
+            v1 = Vector2Add(Vector2Rotate(v1, direction), position);
+            v2 = Vector2Add(Vector2Rotate(v2, direction), position);
+            v3 = Vector2Add(Vector2Rotate(v3, direction), position);
+
+            DrawTriangle(v1, v2, v3, col);
         }
     }
 

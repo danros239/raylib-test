@@ -3,7 +3,7 @@
 #define ENGINE
 #endif
 
-// #include <vector>
+#include <vector>
 
 const int window_width = 1280, window_height = 720;
 
@@ -21,9 +21,9 @@ const Vector2 shipVertices[] = {
                         { 20, 0},
                         {-20, 0},
                         { 4, 5},
-                        {-14, 12},
+                        {-10, 14},
                         {4, -5},
-                        {-14, -12}
+                        {-10, -14}
 };
 const int shipIndices[] = {
     0, 1, 2,
@@ -132,13 +132,92 @@ public:
     }
 };
 
+class Component
+{
+public:
+    unsigned int ID;
+    size_t line, column;
+    Component()
+    {
+        ID = 0;
+        line = 0;
+        column = 0;
+    }
+    Component(unsigned int id)
+    {
+        ID = id;
+        line = 0;
+        column = 0;
+    }
+};
+
 class Layout
 {
 private:
-    int state=0;
+    int state;
 public:
-    unsigned char* layoutArray;
-    
+    std::string* layoutArray;
+    bool* occupied;
+    std::vector<Component> componentArray;
+    size_t lines, columns;
+    Vector2 offset;
+    enum LayoutColors
+    {
+
+    };
+    Layout()
+    {
+        state = 0;
+        lines = 0;
+        columns = 0;
+        layoutArray = nullptr;
+        occupied = nullptr;
+        offset = (Vector2){0, 0};
+    }
+    void initDefault()
+    {
+        lines = 7;
+        columns = 5;
+        offset = (Vector2){columns * -15.0f + 2.5, lines*-15.0f + 30};
+        layoutArray = new std::string[7]{"00r00",
+                                         "00r00", 
+                                         "0brb0", 
+                                         "0ggg0", 
+                                         "bgggb", 
+                                         "0yyy0", 
+                                         "00y00"};
+
+        occupied = new bool[columns*lines];
+        for(int i=0; i<columns*lines; i++)
+        {
+            occupied[i] = (layoutArray[i/columns][i%columns] == '0');
+        }
+    }
+    void addComponent(size_t line, size_t column, Component comp)
+    {
+        if(!occupied[line*columns + lines]);
+        {
+            comp.line = line;
+            comp.column = column;
+            componentArray.push_back(comp);
+            occupied[line*columns + column] = true;
+            
+        }
+    }
+    void removeComponent(size_t line, size_t column)
+    {
+        if(!componentArray.empty())
+        {
+            Component last = componentArray.back();
+            componentArray.pop_back();
+            occupied[last.line * columns + last.column] = false;
+        }
+    }
+    ~Layout()
+    {
+        delete[](layoutArray);
+        delete[](occupied);
+    }
 };
 
 class Projectile
@@ -179,6 +258,14 @@ public:
     }
 };
 
+class Turret
+{
+    public:
+    float heading = 0;
+    float targeting = 0;
+
+};
+
 class Ship // Spaceship, controlled by the player and AI (sold separately)
 {
 private:
@@ -188,6 +275,7 @@ private:
     float maxEnergy, energy, baseRechargeRate = 5, rechargeRate = 5;
     float maxHP, HP;
 public:
+    Layout layout;
     Object *obj;
     Ship()
     {
@@ -210,6 +298,8 @@ public:
         maxEnergy = 10;
         HP = maxHP;
         energy = maxEnergy;
+
+        layout.initDefault();
 
     }
     void turnToMouse(Vector2 mousePos, bool key)
@@ -263,6 +353,48 @@ public:
     void draw()
     {
         obj->draw();
+        
+    }
+    void drawLayout()
+    {
+        obj->draw(6, (Color){25, 25, 100, 255});
+        Vector2 offset = layout.offset;
+        for(int i=0; i<layout.lines; i++)
+        {
+            for(int j=0; j<layout.columns; j++)
+            {
+                char x = layout.layoutArray[i][j];
+                
+                Color drawColor = WHITE;
+                switch (x)
+                {
+                case 'r':
+                    drawColor = RED;
+                    break;  
+                case 'g':
+                    drawColor = GREEN;
+                    break;
+                case 'b':
+                    drawColor = BLUE;
+                    break;
+                case 'y':
+                    drawColor = YELLOW;
+                    break;
+                default:
+                    drawColor = (Color){0, 0, 0, 0};
+                    break;
+                }
+                DrawRectangleV((Vector2){offset.x + j*30, offset.y + i*30}, (Vector2){25, 25}, drawColor);
+                if(layout.occupied[i*layout.columns + j])
+                    DrawRectangleV((Vector2){offset.x + j*30, offset.y + i*30}, (Vector2){5, 5}, RAYWHITE);
+            }
+        }
+        for(int i=0; i<layout.componentArray.size(); i++)
+        {
+            Vector2 drawPos = (Vector2){layout.componentArray[i].column*30 + offset.x,
+                                        layout.componentArray[i].line*30 + offset.y};
+            DrawRectangleV((Vector2){drawPos.x + 5, drawPos.y}, (Vector2){5, 5}, MAGENTA);
+        }
     }
     Object* getObjPtr()
     {
