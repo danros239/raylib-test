@@ -13,6 +13,12 @@
 #define OBJECT
 #endif
 
+void combProjArray(Projectile* arr, size_t size)
+{
+    size_t start = 0, end = size;
+
+}
+
 const Color DEEP_SPACE = (Color){10, 20, 30, 255};
 
 inline bool rectContains(Rectangle rect, Vector2 vec) // returns true if a point(vec) is inside the rectangle(rect)
@@ -63,6 +69,7 @@ public:
     Object* objArray;
     Projectile* projArray;
     Ship playerShip;
+    Ship* shipArray = new Ship[100];
     size_t objCount, projCount;
     UI ui;
 
@@ -78,41 +85,69 @@ public:
     {
         objArray = new Object[20];
         projArray = new Projectile[100];
-        playerShip.init(objArray + objCount);
+
+        // Hitbox defbox;
+        // defbox.initFromFile("data/default.box");
+
+        Component gun(1);
+
+        shipArray[0].init(objArray + objCount);
         objCount++;
-        objArray[1].initDefault();
+        shipArray[0].id = 0;
+        shipArray[0].layout.addComponent(0, 2, gun);
+
+        shipArray[1].init(objArray + objCount);
+        objCount++;
+
+        shipArray[1].id = 1;
         objArray[1].setPos((Vector2){100, 0});
-        objCount++;
     }
     void processInput()
     {
-        playerShip.turnToMouse(cam.getMouseScreenspaceCoords(), !IsKeyDown(KEY_LEFT_CONTROL));
-        playerShip.move(IsKeyDown(KEY_W) || IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsKeyDown(KEY_S), IsKeyDown(KEY_A), IsKeyDown(KEY_D));
-        if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
+        shipArray[0].turnToMouse(cam.getMouseScreenspaceCoords(), !IsKeyDown(KEY_LEFT_CONTROL));
+        shipArray[0].move(IsKeyDown(KEY_W) || IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsKeyDown(KEY_S), IsKeyDown(KEY_A), IsKeyDown(KEY_D));
+        if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) // more keybinds soon
         {
-            playerShip.fire(&projArray[projCount]);
-            projCount++;
+            for(int i=0; i<shipArray[0].layout.componentArray.size(); i++)
+            {
+                if(shipArray[0].layout.componentArray[i].active)
+                // for every active component of controlled ship
+                {
+                    shipArray[0].fire((projArray+projCount), shipArray[0].layout.componentArray[i].ID);
+                    projCount++;
+                }
+            }
+
         }
-        ui.getParams(playerShip.getVitals(), Vector3One());
     }
     void updatePhysics()
     {
         for(int i=0; i<objCount; i++)
         {
+            // check for object-object collisions
             for(int j=0; j<objCount; j++)
             {
                 if(j != i)
                     objArray[i].checkCollision(&objArray[j]);
             }
+            // check for object-projectile collisions
             for(int j=0; j<projCount; j++)
             {
-                objArray[i].checkCollision(&projArray[j].obj);
+                if(i != projArray[j].spawnedBy) // friendly fire protection
+                    if(objArray[i].checkCollision(&projArray[j].obj))
+                    {
+                        projArray[j].active = false;
+                        shipArray[i].hurt(projArray[j].damage);
+                    }
             }
             objArray[i].update();
         }
 
         for(int i=0; i<projCount; i++)
             projArray[i].update();
+        std::cout << projCount << std::endl;
+
+        ui.getParams(shipArray[0].getVitals(), shipArray[1].getVitals());
     }
     void draw()
     {
@@ -138,7 +173,7 @@ public:
         for(int i=0; i<projCount; i++)
             projArray[i].draw();
 
-        playerShip.draw();
+        shipArray[0].draw();
 
         EndMode2D();
         ui.draw();
@@ -151,6 +186,7 @@ public:
             delete[](objArray);
         if(projCount != 0)
             delete[](projArray);
+        delete[](shipArray);
     }
 };
 
@@ -182,7 +218,7 @@ public:
     }
     void updatePhysics()
     {
-
+        
     }
     void draw()
     {

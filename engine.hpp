@@ -1,6 +1,7 @@
 // My 2D physics engine
 #include <iostream>
 #include <cmath>
+#include <fstream>
 
 #ifndef RAYLIB_H
 #include <raylib.h>
@@ -42,6 +43,7 @@ float wrapAngle(float angle)
 class Hitbox // object's hitbox in local coordinates
 {
 public:
+    bool initialized = false;
     int vertexCount, indexCount;
     Vector2* vertices;
     int* indices;
@@ -73,6 +75,7 @@ public:
 
         }
         type = Type::TRIANGLE;
+        initialized = true;
     }
     void initFromArray(const Vector2* vertexArray, const int* indexArray, const int vertexNum, const int triangles)
     {
@@ -96,13 +99,39 @@ public:
         {
             indices[i] = indexArray[i];
         }
+        initialized = true;
 
+    }
+    void initFromFile(const std::string filename)
+    {
+        type = Type::TRIANGLE;
+
+        std::fstream file;
+        file.open(filename);
+        file >> vertexCount >> indexCount;
+        indexCount *= 3;
+
+        vertices = new Vector2[vertexCount];
+        indices = new int[indexCount];
+
+        for(int i=0; i<vertexCount; i++)
+        {
+            file >> vertices[i].x >> vertices[i].y;
+            std::cout << vertices[i].x << " " << vertices[i].y << std::endl;
+
+        }
+        for(int i=0; i<indexCount; i++)
+        {
+            file >> indices[i];
+            std::cout << indices[i] << std::endl;
+        }
+        initialized = true;    
     }
 
     void initPoint()
     {
         type = Type::POINT;
-
+        initialized = true;
     }
 
     bool contains(Vector2 p)
@@ -170,7 +199,7 @@ public:
     float mass, momentInertia;
     Object()
     {
-
+        
     }
     void initDefault()
     {
@@ -183,18 +212,22 @@ public:
         angleAccel = 0;
 
         mass = 10;
-        momentInertia = 150;
+        momentInertia = 750;
 
         rebound = 0.0f;
 
         drawColor = GREEN;
-
-        hbox.initDefault();
     }
 
     bool initHitboxFromArray(const Vector2* vertexArray, const int* indexArray, const int vertexNum, const int triangles)
     {
         hbox.initFromArray(vertexArray, indexArray, vertexNum, triangles);
+        return true;
+    }
+
+    bool initHitboxFromFile(const std::string filename)
+    {
+        hbox.initFromFile(filename);
         return true;
     }
 
@@ -293,6 +326,8 @@ public:
         Vector2 collisionPoint; // common point of two objects in global coords
 
         int collisionCase = obj->hbox.type * 10 + hbox.type;
+
+        bool ans = false;
         switch(collisionCase)
         {
         case 33:
@@ -306,23 +341,23 @@ public:
                     collisionPoint = obj->toGlobal(obj->hbox.vertices[i]);
 
                     handleCollision(obj, collisionNormal, collisionPoint, true);
-                    return true;
+                    ans = true;
                 }
             }
         break;
         case 3:
             if(hbox.contains(toLocal(Vector2Zero(), obj->position, obj->direction)))
             {
-
                 collisionNormal = Vector2Rotate(hbox.collisionNormal, direction);
                 collisionPoint = obj->position;
 
                 handleCollision(obj, collisionNormal, collisionPoint, true);
+                ans = true;
             }
             break;
         }
         drawColor = BLUE;
-        return false;
+        return ans;
     }
 
     bool handleCollision(Object* obj, Vector2 collisionNormal, Vector2 collisionPoint, bool thisNormal) // collision normal in global coords

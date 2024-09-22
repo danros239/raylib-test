@@ -120,8 +120,10 @@ public:
     void draw()
     {
         allyEnergyBar.width = allyVitals.x*width;
+        allyHPBar.width = allyVitals.y*width;
 
         enemyEnergyBar.width = enemyVitals.x*width;
+        enemyHPBar.width = enemyVitals.y*width;
         //enemyEnergyBar.x = (1-enemyVitals.x)*width;
 
         DrawMyRect(allyEnergyBar, YELLOW);
@@ -137,17 +139,53 @@ class Component
 public:
     unsigned int ID;
     size_t line, column;
+    char type;
+    bool active;
+    int cooldown = 0;
+    KeyboardKey keyBinding;
     Component()
     {
         ID = 0;
         line = 0;
         column = 0;
+        active = false;
+        keyBinding = KeyboardKey::KEY_ZERO;
+        type = '0';
     }
     Component(unsigned int id)
     {
         ID = id;
-        line = 0;
-        column = 0;
+        switch (id)
+        {
+        case 1:
+            line = 0;
+            column = 0;
+            active = true;
+            //keyBinding = MouseButton::MOUSE_BUTTON_LEFT;
+            type = 'r';
+            break;
+        
+        default:
+            line = 0;
+            column = 0;
+            active = false;
+            type = 'g';
+            break;
+        }
+
+    }
+    void activate()
+    {
+        switch(ID)
+        {
+        case 1:
+            cooldown = 60;
+
+            break;
+        
+        default:
+            break;
+        }
     }
 };
 
@@ -163,7 +201,7 @@ public:
     Vector2 offset;
     enum LayoutColors
     {
-
+        
     };
     Layout()
     {
@@ -178,7 +216,7 @@ public:
     {
         lines = 7;
         columns = 5;
-        offset = (Vector2){columns * -15.0f + 2.5, lines*-15.0f + 30};
+        offset = (Vector2){columns * -15.0f + 2.5f, lines*-15.0f + 30.f};
         layoutArray = new std::string[7]{"00r00",
                                          "00r00", 
                                          "0brb0", 
@@ -195,7 +233,7 @@ public:
     }
     void addComponent(size_t line, size_t column, Component comp)
     {
-        if(!occupied[line*columns + lines]);
+        if(!occupied[line*columns + column])
         {
             comp.line = line;
             comp.column = column;
@@ -220,7 +258,7 @@ public:
     }
 };
 
-class Projectile
+class Projectile // Anything fired from a ship's gun
 {
 public:
     Object obj;
@@ -230,34 +268,64 @@ public:
     };
     Behavior type;
 
-    float lifetime;
+    float lifetime, damage, velocity;
+    bool active;
+    size_t spawnedBy;
 
     Projectile()
     {
         type = KINETIC;
+        spawnedBy = 0;
+        active = false;
+        damage = 0;
+        velocity = 0;
     }
     void init()
     {
+        obj.initDefault();
         obj.initHitboxPoint();
+        active = true;
     }
     void init(Behavior typ)
     {
-        obj.initDefault();
-        obj.initHitboxPoint();
-        type = typ;
-        obj.setMass(1);
+        switch(typ)
+        {
+        default:
+            obj.initDefault();
+            obj.initHitboxPoint();
+            obj.setMass(1);
+
+            damage = 10;
+            type = typ;
+            lifetime = 2;
+            active = true;
+            
+            break;
+        }
+    }
+    void setParams(Vector2 pos, Vector2 vel)
+    {
+        obj.setPos(pos);
+        obj.applyImpulse(Vector2Scale(vel, obj.mass));
     }
     void update()
     {
-        obj.update();
-        lifetime -= 1/fps;
+        if(active)
+        {
+            obj.update();
+            lifetime -= 1/fps;
+            if(lifetime < 0)
+                active = false;
+        }
     }
     void draw()
     {
-        DrawCircleV(obj.getPos(), 3, MAGENTA);
+        if(active)
+            DrawCircleV(obj.getPos(), 3, MAGENTA);
+        // DrawText(std::to_string(lifetime).c_str(), obj.getPos().x, obj.getPos().y, 10, WHITE);
+        // DrawText(std::to_string(active).c_str(), obj.getPos().x, obj.getPos().y + 15, 10, WHITE);
     }
 };
-
 class Turret
 {
     public:
@@ -266,17 +334,18 @@ class Turret
 
 };
 
-class Ship // Spaceship, controlled by the player and AI (sold separately)
+class Ship // Spaceship, controlled by the player and AI (AI sold separately)
 {
 private:
     bool initialized = false;
-    float baseThrust = 1500, baseAngleAccel = 5000;
+    float baseThrust = 1500, baseAngleAccel = 10000;
     float thrust = baseThrust, angleAccel = baseAngleAccel;
     float maxEnergy, energy, baseRechargeRate = 5, rechargeRate = 5;
     float maxHP, HP;
 public:
     Layout layout;
     Object *obj;
+    size_t id;
     Ship()
     {
         maxEnergy = 0;
@@ -284,6 +353,7 @@ public:
         maxHP = 0;
         HP = 0;
         obj = nullptr;
+        id = 0;
     }
     void init(Object* objPtr)
     {
@@ -292,9 +362,11 @@ public:
 
         obj->setPos((Vector2){0, 28});
         obj->setMass(10);
-        obj->initHitboxFromArray(shipVertices, shipIndices, 6, 4);
+        // obj->initHitboxFromArray(shipVertices, shipIndices, 6, 4);
+        obj->initHitboxFromFile("data/viper.box");
 
         maxHP = 100;
+
         maxEnergy = 10;
         HP = maxHP;
         energy = maxEnergy;
@@ -335,19 +407,26 @@ public:
         }
         energy += baseRechargeRate/fps;
         energy = Clamp(energy, 0, maxEnergy);
-        // if(akey)
-        //     obj.applyMoment(-defAngleAccel);
-        // if(dkey)
-        //     obj.applyMoment(defAngleAccel);
     }
-    void fire(Projectile* projectilePtr)
+    void fire(Projectile* projectilePtr, size_t type)
     {
-        projectilePtr->init(Projectile::Behavior::KINETIC);
-        projectilePtr->lifetime = 1;
+        switch (type)
+        {
+        case 1:
+            projectilePtr->init(Projectile::Behavior::KINETIC);
+            projectilePtr->lifetime = 1;
+            projectilePtr->spawnedBy = id;
 
-        Vector2 vel = Vector2Add(obj->getVel(), Vector2Rotate((Vector2){200, 0}, obj->getDirection()));
-        projectilePtr->obj.applyImpulse(Vector2Scale(vel, projectilePtr->obj.mass));
-        projectilePtr->obj.setPos(obj->getPos());
+            Vector2 vel = Vector2Add(obj->getVel(), Vector2Rotate((Vector2){200, 0}, obj->getDirection()));
+            projectilePtr->obj.applyImpulse(Vector2Scale(vel, projectilePtr->obj.mass));
+            obj->applyImpulse(Vector2Scale(vel, -projectilePtr->obj.mass));
+            projectilePtr->obj.setPos(obj->getPos());
+        break;
+        }
+    }
+    void hurt(float damage)
+    {
+        HP -= damage;
     }
 
     void draw()
